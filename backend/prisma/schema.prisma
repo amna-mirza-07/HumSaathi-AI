@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Persona {
+  child
+  teen
+  adult
+}
+
+enum Language {
+  en
+  ur
+  ur_rm
+}
+
+enum ActivityType {
+  letter
+  number
+  shape_color_match
+  counting
+  animal_matching
+  emotion_learning
+  routine_sequencing
+}
+
+enum Difficulty {
+  beginner
+  easy
+  medium
+  hard
+  advanced
+}
+
+enum UserRole {
+  learner
+  parent
+  teacher
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  role         UserRole @default(learner)
+  persona      Persona?
+  language     Language @default(en)
+  sensoryPrefs String   @default("{}")
+  parentPin    String   @default("1234")
+  setupComplete Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assessments       Assessment[]
+  attempts          Attempt[]
+  progress          Progress[]
+  badges            Badge[]
+  aiRecommendations AiRecommendation[]
+}
+
+model Assessment {
+  id             String     @id @default(cuid())
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona        Persona
+  language       Language
+  questions      String
+  responses      String
+  score          Float
+  estimatedLevel Difficulty
+  areaLevels     String
+  aiSummary      String?
+  createdAt      DateTime   @default(now())
+
+  @@index([userId])
+}
+
+model Activity {
+  id         String       @id @default(cuid())
+  type       ActivityType
+  topic      String
+  title      String
+  difficulty Difficulty
+  language   Language
+  personas   String
+  content    String
+  isActive   Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+
+  attempts Attempt[]
+
+  @@index([type, difficulty, language])
+}
+
+model Attempt {
+  id                  String     @id @default(cuid())
+  userId              String
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityId          String
+  activity            Activity   @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  answers             String
+  score               Float
+  correctCount        Int
+  totalCount          Int
+  starsAwarded        Int        @default(0)
+  attemptsUsed        Int        @default(1)
+  timeMs              Int?
+  completed           Boolean    @default(false)
+  difficultyAtAttempt Difficulty
+  createdAt           DateTime   @default(now())
+  completedAt         DateTime?
+
+  @@index([userId, activityId])
+  @@index([userId, createdAt])
+}
+
+model Progress {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill     String
+  level     Difficulty
+  accuracy  Float      @default(0)
+  attempts  Int        @default(0)
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, skill])
+  @@index([userId])
+}
+
+model Badge {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code       String
+  unlockedAt DateTime @default(now())
+
+  @@unique([userId, code])
+  @@index([userId])
+}
+
+model AiRecommendation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  input     String
+  output    String
+  source    String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
